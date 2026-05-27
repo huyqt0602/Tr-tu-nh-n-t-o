@@ -23,10 +23,10 @@ class GridEnvironment:
         row, col = position
 
         directions = [
-            (-1, 0),  # UP
-            (1, 0),   # DOWN
-            (0, -1),  # LEFT
-            (0, 1)    # RIGHT
+            (-1, 0),
+            (1, 0),
+            (0, -1),
+            (0, 1)
         ]
 
         neighbors = []
@@ -36,7 +36,11 @@ class GridEnvironment:
             nr = row + dr
             nc = col + dc
 
-            if self.is_valid(nr, nc):
+            if (
+                0 <= nr < self.rows
+                and 0 <= nc < self.cols
+                and self.grid[nr][nc] != -1
+            ):
                 neighbors.append((nr, nc))
 
         return neighbors
