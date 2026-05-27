@@ -1,6 +1,5 @@
 from algorithms.base_algorithm import SearchAlgorithm
 
-
 class DFSAlgorithm(SearchAlgorithm):
 
     def search(self, environment, start, goal):

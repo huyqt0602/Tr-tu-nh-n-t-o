@@ -1,18 +1,22 @@
-from collections import deque
 from algorithms.base_algorithm import SearchAlgorithm
+import heapq
 
-class BFSAlgorithm(SearchAlgorithm):
+class UCSAlgorithm:
 
     def search(self, environment, start, goal):
 
-        queue = deque()
-        queue.append((start, [start]))
+        pq = []
+
+        heapq.heappush(
+            pq,
+            (0, start, [start])
+        )
 
         visited = set()
 
-        while queue:
+        while pq:
 
-            current, path = queue.popleft()
+            cost, current, path = heapq.heappop(pq)
 
             if current == goal:
                 return path
@@ -25,8 +29,14 @@ class BFSAlgorithm(SearchAlgorithm):
             for neighbor in environment.get_neighbors(current):
 
                 if neighbor not in visited:
-                    queue.append(
-                        (neighbor, path + [neighbor])
+
+                    heapq.heappush(
+                        pq,
+                        (
+                            cost + 1,
+                            neighbor,
+                            path + [neighbor]
+                        )
                     )
 
         return []
