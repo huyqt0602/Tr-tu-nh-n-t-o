@@ -5,9 +5,12 @@ from environment.grid_environment import GridEnvironment
 
 from algorithms.bfs_algorithm import BFSAlgorithm
 from algorithms.dfs_algorithm import DFSAlgorithm
+from algorithms.ids_algorithm import IDSAlgorithm
+from algorithms.ucs_algorithm import UCSAlgorithm
+from algorithms.greedy_algorithm import GreedyAlgorithm
+from algorithms.astar_algorithm import AStarAlgorithm
 
 from agents.vacuum_agent import VacuumAgent
-
 
 class VacuumUI:
 
@@ -23,18 +26,19 @@ class VacuumUI:
 
         self.root.configure(bg="#dfe6e9")
 
+        # Môi trường ban đầu
         self.original_grid = [
             [0, 1, 0, 0],
-            [0, -1, 1, 0],
+            [1, -1, 1, 0],
             [0, 0, 1, 0],
-            [1, 0, 0, 0]
-        ]
+            [1, 0, 0, 1]
+        ] 
 
         self.environment = GridEnvironment(
             [row[:] for row in self.original_grid]
         )
 
-        self.robot_position = (0, 0)
+        self.robot_position = (0, 0) # Vị trí bắt đầu của robot
 
         self.visited_cells = []
 
@@ -89,8 +93,15 @@ class VacuumUI:
             value="BFS"
         )
 
-        for algo in ["BFS", "DFS"]:
-
+        for algo in [
+            "BFS",
+            "DFS",
+            "IDS",
+            "UCS",
+            "GREEDY",
+            "A*"
+        ]:
+            
             button = tk.Radiobutton(
                 self.sidebar,
                 text=algo,
@@ -353,7 +364,11 @@ class VacuumUI:
 
         algorithms = {
             "BFS": BFSAlgorithm,
-            "DFS": DFSAlgorithm
+            "DFS": DFSAlgorithm,
+            "IDS": IDSAlgorithm,
+            "UCS": UCSAlgorithm,
+            "GREEDY": GreedyAlgorithm,
+            "A*": AStarAlgorithm
         }
 
         selected = self.algorithm_var.get()
