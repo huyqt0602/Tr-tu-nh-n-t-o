@@ -1,96 +1,115 @@
+from algorithms.bfs_algorithm import BFSAlgorithm
+
+
 class VacuumAgent:
 
-    def __init__(
-        self,
-        environment,
-        algorithm,
-        start_position
-    ):
+    def __init__(self, environment, algorithm, start_position):
 
-        self.environment = environment
+        self.environment  = environment
+        self.algorithm    = algorithm
+        self.position     = start_position
+        self.visited      = {start_position}
 
-        self.algorithm = algorithm
+    def find_nearest_dirt(self, exclude=None):
 
-        self.position = start_position
+        exclude = exclude or set()
 
-        self.visited = set()
+        dirty = [
+            d for d in self.environment.get_dirty_cells()
+            if d not in exclude
+        ]
 
-        self.visited.add(start_position)
-
-    def find_nearest_dirt(self):
-
-        dirt_cells = self.environment.get_dirty_cells()
-
-        if not dirt_cells:
+        if not dirty:
             return None
 
-        nearest = None
-
-        min_distance = float("inf")
-
-        for dirt in dirt_cells:
-
-            distance = (
-                abs(dirt[0] - self.position[0]) +
-                abs(dirt[1] - self.position[1])
+        return min(
+            dirty,
+            key=lambda d: (
+                abs(d[0] - self.position[0]) +
+                abs(d[1] - self.position[1])
             )
-
-            if distance < min_distance:
-
-                min_distance = distance
-
-                nearest = dirt
-
-        return nearest
+        )
 
     def optimize_path(self, path):
 
-        optimized = []
+        if not path:
+            return []
 
-        local_visited = set()
+        result = [path[0]]
 
-        for pos in path:
+        for pos in path[1:]:
+            if pos != result[-1]:
+                result.append(pos)
 
-            if pos not in local_visited:
+        return result
 
-                optimized.append(pos)
+    def join_paths(self, path_a, path_b):
 
-                local_visited.add(pos)
+        if not path_a:
+            return path_b
+        if not path_b:
+            return path_a
 
-        return optimized
+        if path_a[-1] == path_b[0]:
+            return path_a + path_b[1:]
 
+        return path_a + path_b
 
     def run(self):
 
         final_path = []
 
+        permanently_unreachable = set()
+        bfs = BFSAlgorithm()
+
         while True:
 
-            target = self.find_nearest_dirt()
+            target = self.find_nearest_dirt(exclude=permanently_unreachable)
 
             if target is None:
                 break
 
-            path = self.algorithm.search(
-                self.environment,
-                self.position,
-                target
+            algo_path = self.algorithm.search(
+                self.environment, self.position, target
             )
+            algo_path = self.optimize_path(algo_path)
 
-            path = self.optimize_path(path)
+            stuck_at = algo_path[-1] if algo_path else self.position
 
-            if final_path and path:
+            if stuck_at != target:
 
-                if final_path[-1] == path[0]:
-                    path = path[1:]
+                bfs_path = bfs.search(self.environment, stuck_at, target)
 
-            final_path.extend(path)
+                if not bfs_path:
+                    permanently_unreachable.add(target)
+                    segment = self._merge_into_final(
+                        final_path, algo_path
+                    )
+                    final_path = segment
+                    self.position = stuck_at
+                    continue
 
-            for pos in path:
+                combined = self.join_paths(algo_path, bfs_path)
+
+            else:
+                combined = algo_path
+
+            final_path = self._merge_into_final(final_path, combined)
+
+            for pos in combined:
                 self.visited.add(pos)
 
             self.position = target
-
             self.environment.clean(target)
 
         return final_path
+
+    def _merge_into_final(self, final_path, segment):
+
+        if not segment:
+            return final_path
+
+        if final_path and final_path[-1] == segment[0]:
+            return final_path + segment[1:]
+
+        return final_path + segment
