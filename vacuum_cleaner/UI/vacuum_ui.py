@@ -1,3 +1,9 @@
+import sys
+import os
+
+# Đảm bảo Python tìm được các module dù chạy file từ bất kỳ đâu
+sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+
 import tkinter as tk
 from tkinter.scrolledtext import ScrolledText
 
@@ -9,6 +15,10 @@ from algorithms.ids_algorithm import IDSAlgorithm
 from algorithms.ucs_algorithm import UCSAlgorithm
 from algorithms.greedy_algorithm import GreedyAlgorithm
 from algorithms.astar_algorithm import AStarAlgorithm
+from algorithms.idastar_algorithm import IDAStarAlgorithm
+from algorithms.simple_hill_climbing import SimpleHillClimbingAlgorithm
+from algorithms.steepest_hill_climbing import SteepestHillClimbingAlgorithm
+from algorithms.stochastic_hill_climbing import StochasticHillClimbingAlgorithm
 
 from agents.vacuum_agent import VacuumAgent
 
@@ -22,7 +32,7 @@ class VacuumUI:
 
         self.root.title("ROBOT HÚT BỤI AI")
 
-        self.root.geometry("1450x850")
+        self.root.geometry("1450x1050")
 
         self.root.configure(bg="#dfe6e9")
 
@@ -31,14 +41,15 @@ class VacuumUI:
             [0, 1, 0, 0],
             [1, -1, 1, 0],
             [0, 0, 1, 0],
-            [1, 0, 0, 1]
-        ] 
+            [1, 0, -1, 1]
+        ]
 
         self.environment = GridEnvironment(
             [row[:] for row in self.original_grid]
         )
 
-        self.robot_position = (0, 0) # Vị trí bắt đầu của robot
+        # Vị trí ban đầu của robot
+        self.robot_position = (0, 0)
 
         self.visited_cells = []
 
@@ -48,7 +59,6 @@ class VacuumUI:
 
         self.robot_draw = None
         self.robot_text = None
-
 
         self.draw_grid()
 
@@ -69,7 +79,7 @@ class VacuumUI:
         self.sidebar = tk.Frame(
             self.main_frame,
             bg="#2d3436",
-            width=220
+            width=260
         )
 
         self.sidebar.pack(
@@ -87,11 +97,21 @@ class VacuumUI:
             font=("Arial", 20, "bold")
         )
 
-        title.pack(pady=25)
+        title.pack(pady=20)
 
         self.algorithm_var = tk.StringVar(
             value="BFS"
         )
+
+        # --- Nhóm tìm kiếm ---
+        search_label = tk.Label(
+            self.sidebar,
+            text="─── TÌM KIẾM ───",
+            bg="#2d3436",
+            fg="#b2bec3",
+            font=("Arial", 10)
+        )
+        search_label.pack(pady=(0, 4))
 
         for algo in [
             "BFS",
@@ -99,9 +119,10 @@ class VacuumUI:
             "IDS",
             "UCS",
             "GREEDY",
-            "A*"
+            "A*",
+            "IDA*"
         ]:
-            
+
             button = tk.Radiobutton(
                 self.sidebar,
                 text=algo,
@@ -118,7 +139,45 @@ class VacuumUI:
                 activeforeground="white"
             )
 
-            button.pack(pady=10)
+            button.pack(pady=7)
+
+        # --- Nhóm Local Search ---
+        local_label = tk.Label(
+            self.sidebar,
+            text="─ LOCAL SEARCH ─",
+            bg="#2d3436",
+            fg="#b2bec3",
+            font=("Arial", 10)
+        )
+        local_label.pack(pady=(10, 4))
+
+        local_algos = [
+            ("Leo đồi\nĐơn giản",   "SIMPLE HC"),
+            ("Leo đồi\nDốc nhất",    "STEEPEST HC"),
+            ("Leo đồi\nNgẫu nhiên",  "STOCHASTIC HC"),
+        ]
+
+        for label_text, value in local_algos:
+
+            button = tk.Radiobutton(
+                self.sidebar,
+                text=label_text,
+                variable=self.algorithm_var,
+                value=value,
+                indicatoron=False,
+                width=14,
+                height=2,
+                font=("Arial", 11, "bold"),
+                bg="#636e72",
+                fg="white",
+                selectcolor="#6c5ce7",
+                activebackground="#6c5ce7",
+                activeforeground="white",
+                justify="center",
+                wraplength=200
+            )
+
+            button.pack(pady=5)
 
         # START BUTTON
         start_button = tk.Button(
@@ -133,7 +192,7 @@ class VacuumUI:
             relief="flat"
         )
 
-        start_button.pack(pady=(50, 15))
+        start_button.pack(pady=(30, 12))
 
         # RESET BUTTON
         reset_button = tk.Button(
@@ -274,32 +333,23 @@ class VacuumUI:
 
                 color = "#ecf0f1"
 
-                # Ô đã đi
                 if (r, c) in self.visited_cells:
                     color = "#74b9ff"
 
-                # Bụi
                 if value == 1:
                     color = "#f1c40f"
 
-                # Tường
                 if value == -1:
                     color = "#2d3436"
 
-                # Vẽ ô
                 self.canvas.create_rectangle(
-                    x1,
-                    y1,
-                    x2,
-                    y2,
+                    x1, y1, x2, y2,
                     fill=color,
                     outline="#636e72",
                     width=2
                 )
 
-                # Text bụi
                 if value == 1:
-
                     self.canvas.create_text(
                         (x1 + x2) / 2,
                         (y1 + y2) / 2,
@@ -308,9 +358,7 @@ class VacuumUI:
                         tags=f"dirt_{r}_{c}"
                     )
 
-                # Text tường
                 elif value == -1:
-
                     self.canvas.create_text(
                         (x1 + x2) / 2,
                         (y1 + y2) / 2,
@@ -319,13 +367,11 @@ class VacuumUI:
                         font=("Arial", 22, "bold")
                     )
 
-        # Vẽ robot
         self.draw_robot()
 
     # DRAW ROBOT
     def draw_robot(self):
 
-        # Xóa robot cũ
         if self.robot_draw:
             self.canvas.delete(self.robot_draw)
 
@@ -340,12 +386,9 @@ class VacuumUI:
         x2 = x1 + self.CELL_SIZE
         y2 = y1 + self.CELL_SIZE
 
-        # Vẽ robot
         self.robot_draw = self.canvas.create_oval(
-            x1 + 10,
-            y1 + 10,
-            x2 - 10,
-            y2 - 10,
+            x1 + 10, y1 + 10,
+            x2 - 10, y2 - 10,
             fill="#0984e3",
             outline="white",
             width=3
@@ -363,12 +406,16 @@ class VacuumUI:
     def get_algorithm(self):
 
         algorithms = {
-            "BFS": BFSAlgorithm,
-            "DFS": DFSAlgorithm,
-            "IDS": IDSAlgorithm,
-            "UCS": UCSAlgorithm,
-            "GREEDY": GreedyAlgorithm,
-            "A*": AStarAlgorithm
+            "BFS":          BFSAlgorithm,
+            "DFS":          DFSAlgorithm,
+            "IDS":          IDSAlgorithm,
+            "UCS":          UCSAlgorithm,
+            "GREEDY":       GreedyAlgorithm,
+            "A*":           AStarAlgorithm,
+            "IDA*":         IDAStarAlgorithm,
+            "SIMPLE HC":    SimpleHillClimbingAlgorithm,
+            "STEEPEST HC":  SteepestHillClimbingAlgorithm,
+            "STOCHASTIC HC": StochasticHillClimbingAlgorithm,
         }
 
         selected = self.algorithm_var.get()
@@ -401,7 +448,7 @@ class VacuumUI:
         )
 
         self.animate(0)
-        
+
     # ANIMATION
     def animate(self, index):
 
@@ -417,24 +464,17 @@ class VacuumUI:
 
             return
 
-        # Vị trí mới
         position = self.path[index]
 
         self.robot_position = position
 
-        # Lưu ô đã đi
         if position not in self.visited_cells:
             self.visited_cells.append(position)
 
-        r, c = position
-
-        # Làm sạch ô
         self.environment.clean(position)
 
-        # Vẽ lại toàn bộ grid
         self.draw_grid()
 
-        # Status
         self.info_label.config(
             text=f"Robot đang ở: {position}"
         )
@@ -458,7 +498,7 @@ class VacuumUI:
         self.environment = GridEnvironment(
             [row[:] for row in self.original_grid]
         )
-
+        
         self.robot_position = (0, 0)
 
         self.visited_cells = []
