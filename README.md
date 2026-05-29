@@ -168,7 +168,3 @@ brew install python-tk
 ## Tác Giả
 
 **huyqt0602** — [github.com/huyqt0602](https://github.com/huyqt0602)
-
----
-
-*Dự án phục vụ mục đích học tập môn Trí tuệ nhân tạo.*
