@@ -68,7 +68,8 @@ vacuum_cleaner/
 │   │   -- Tìm kiếm cục bộ (Local Search) --
 │   ├── simple_hill_climbing.py       # Leo đồi đơn giản
 │   ├── steepest_hill_climbing.py     # Leo đồi dốc nhất
-│   └── stochastic_hill_climbing.py   # Leo đồi ngẫu nhiên
+│   ├── stochastic_hill_climbing.py   # Leo đồi ngẫu nhiên
+|   └── random_restart_hill_climbing  # Leo đồi khởi tạo ngẫu nhiên
 │
 └── ui/
     └── vacuum_ui.py                  # Giao diện đồ họa Tkinter
@@ -97,7 +98,7 @@ Hàm heuristic sử dụng: khoảng cách Manhattan — `h = |Δrow| + |Δcol|`
 | A\* | Có | Kết hợp chi phí thực `g` và heuristic `h`, hàm đánh giá `f = g + h` |
 | IDA\* | Có | Phiên bản tiết kiệm bộ nhớ của A\*, dùng ngưỡng `f` thay cho độ sâu trong IDS |
 
-### Nhóm 3 — Tìm kiếm cục bộ (Local Search)
+### Nhóm 3 — Tìm kiếm cục bộ (Local Search) 
 
 Hàm giá trị (value): `v = −Manhattan(vị_trí, goal)` — cực đại hóa tương đương tối thiểu hóa khoảng cách.
 
