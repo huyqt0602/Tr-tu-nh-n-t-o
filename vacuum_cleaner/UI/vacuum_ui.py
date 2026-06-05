@@ -1,7 +1,6 @@
 import sys
 import os
 
-
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 import tkinter as tk
@@ -19,330 +18,348 @@ from algorithms.idastar_algorithm import IDAStarAlgorithm
 from algorithms.simple_hill_climbing import SimpleHillClimbingAlgorithm
 from algorithms.steepest_hill_climbing import SteepestHillClimbingAlgorithm
 from algorithms.stochastic_hill_climbing import StochasticHillClimbingAlgorithm
-from algorithms.random_restart_hill_climbing import RandomRestartHillClimbingAlgorithm 
+from algorithms.random_restart_hill_climbing import RandomRestartHillClimbingAlgorithm
+from algorithms.local_beam_search import LocalBeamSearchAlgorithm
+from algorithms.simulated_annealing import SimulatedAnnealingAlgorithm
 
 from agents.vacuum_agent import VacuumAgent
 
+# ── BẢNG MÀU ───────────────────────────────────────────
+_BG      = "#1e293b"   
+_PANEL   = "#0f172a"   
+_CARD    = "#334155"   
+_BORDER  = "#475569"   
+_TEXT    = "#f1f5f9"   
+_MUTED   = "#94a3b8"   
+
+_GREEN   = "#10b981"   
+_VIOLET  = "#8b5cf6"   
+_AMBER   = "#f59e0b"   
+
+_C_EMPTY    = "#1e293b"   
+_C_DIRT     = "#b45309"   
+_C_VISITED  = "#0f766e"   
+_C_OBSTACLE = "#7f1d1d"   
+_C_ROBOT    = "#3b82f6"   
+
+_C_X_MARK   = "#fca5a5"   
+_C_TEXT_COORD= "#64748b"  
+
+
 class VacuumUI:
 
-    CELL_SIZE = 90
+    CELL = 82          
+    ANIM = 210         
 
-    def __init__(self, root):
+    _DEFAULT_GRID = [
+        [0,  1,  0,  0],
+        [1, -1,  1,  0],
+        [0,  0,  1,  0],
+        [1,  0, -1,  1],
+    ]
+
+    _ALGO_MAP = {
+        "BFS":               BFSAlgorithm,
+        "DFS":               DFSAlgorithm,
+        "IDS":               IDSAlgorithm,
+        "UCS":               UCSAlgorithm,
+        "GREEDY":            GreedyAlgorithm,
+        "A*":                AStarAlgorithm,
+        "IDA*":              IDAStarAlgorithm,
+        "SIMPLE HC":         SimpleHillClimbingAlgorithm,
+        "STEEPEST HC":       SteepestHillClimbingAlgorithm,
+        "STOCHASTIC HC":     StochasticHillClimbingAlgorithm,
+        "RANDOM RESTART HC": RandomRestartHillClimbingAlgorithm,
+        "LOCAL BEAM":        LocalBeamSearchAlgorithm,
+        "SIMULATED ANNEAL":  SimulatedAnnealingAlgorithm,
+    }
+
+    def __init__(self, root: tk.Tk):
         self.root = root
-        self.root.title("ROBOT HÚT BỤI AI")
-        self.root.geometry("1450x1050")
-        self.root.configure(bg="#dfe6e9")
+        self.root.title("Robot Hút Bụi — AI Algorithms")
+        self.root.geometry("1300x820")
+        self.root.resizable(False, False)
+        self.root.configure(bg=_BG)
 
-        # Môi trường ban đầu
-        self.original_grid = [
-            [0, 1, 0, 0],
-            [1, -1, 1, 0],
-            [0, 0, 1, 0],
-            [1, 0, -1, 1]
-        ]
-
-        self.environment = GridEnvironment(
-            [row[:] for row in self.original_grid]
-        )
-
-        # Vị trí ban đầu của robot
-        self.robot_position = (0, 0)
-        self.visited_cells = []
-        self.path = []
-
-        self.create_layout()
-
-        self.robot_draw = None
-        self.robot_text = None
-
+        self.original_grid = [row[:] for row in self._DEFAULT_GRID]
+        self._reset_state()
+        self._build()
         self.draw_grid()
 
-    # UI LAYOUT
-    def create_layout(self):
-        self.main_frame = tk.Frame(self.root, bg="#dfe6e9")
-        self.main_frame.pack(fill="both", expand=True)
+    def _reset_state(self):
+        self.environment   = GridEnvironment([r[:] for r in self.original_grid])
+        self.robot_pos     = (0, 0)
+        self.visited       = []
+        self.path          = []
+        self._oval_id      = None
+        self._robot_lbl_id = None
 
-        # LEFT PANEL (SIDEBAR)
-        self.sidebar = tk.Frame(self.main_frame, bg="#2d3436", width=260)
-        self.sidebar.pack(side="left", fill="y")
-        self.sidebar.pack_propagate(False)
+    def _build(self):
+        self._make_topbar()
 
-        title = tk.Label(
-            self.sidebar, text="THUẬT TOÁN",
-            bg="#2d3436", fg="white", font=("Arial", 20, "bold")
-        )
-        title.pack(pady=20)
+        body = tk.Frame(self.root, bg=_BG)
+        body.pack(fill="both", expand=True, padx=12, pady=(6, 0))
 
-        self.algorithm_var = tk.StringVar(value="BFS")
+        self._make_sidebar(body)
+        self._make_canvas_area(body)
+        self._make_log_panel(body)
 
-        # --- Nhóm tìm kiếm (Uninformed / Informed Search) ---
-        search_label = tk.Label(
-            self.sidebar, text="─── TÌM KIẾM ───",
-            bg="#2d3436", fg="#b2bec3", font=("Arial", 10)
-        )
-        search_label.pack(pady=(0, 4))
+        self._make_statusbar()
 
-        for algo in ["BFS", "DFS", "IDS", "UCS", "GREEDY", "A*", "IDA*"]:
-            button = tk.Radiobutton(
-                self.sidebar, text=algo,
-                variable=self.algorithm_var, value=algo,
-                indicatoron=False, width=12, height=1,
-                font=("Arial", 14, "bold"),
-                bg="#636e72", fg="white",
-                selectcolor="#00b894", activebackground="#00b894", activeforeground="white"
-            )
-            button.pack(pady=4)
+    # ── Top bar ──────────────────────────────────────────────────────────
+    def _make_topbar(self):
+        bar = tk.Frame(self.root, bg=_PANEL, height=50, bd=1, relief="solid")
+        bar.config(highlightbackground=_BORDER, highlightthickness=1)
+        bar.pack(fill="x")
+        
+        tk.Label(bar, text="ROBOT HÚT BỤI AI",
+                 bg=_PANEL, fg=_TEXT,
+                 font=("Segoe UI", 14, "bold")).pack(side="left", padx=18, pady=10)
+        tk.Label(bar, text="Trí tuệ nhân tạo · Mô phỏng thuật toán tìm kiếm",
+                 bg=_PANEL, fg=_MUTED,
+                 font=("Segoe UI", 9)).pack(side="left", pady=14)
 
-        # --- Nhóm Local Search ---
-        local_label = tk.Label(
-            self.sidebar, text="─ LOCAL SEARCH ─",
-            bg="#2d3436", fg="#b2bec3", font=("Arial", 10)
-        )
-        local_label.pack(pady=(12, 4))
+    # ── Sidebar ──────────────────────────────────────────────────────────
+    def _make_sidebar(self, parent):
+        sb = tk.Frame(parent, bg=_PANEL, width=235, highlightbackground=_BORDER, highlightthickness=1)
+        sb.pack(side="left", fill="y", padx=(0, 10))
+        sb.pack_propagate(False)
 
-        local_algos = [
-            ("Leo đồi Đơn giản", "SIMPLE HC"),
-            ("Leo đồi Dốc nhất", "STEEPEST HC"),
-            ("Leo đồi Ngẫu nhiên", "STOCHASTIC HC"),
-            ("Leo đồi Khởi tạo\nNgẫu nhiên", "RANDOM RESTART HC") # Gộp vào chung nhóm
-        ]
+        self.algo_var = tk.StringVar(value="BFS")
 
-        for label_text, value in local_algos:
-            button = tk.Radiobutton(
-                self.sidebar, text=label_text,
-                variable=self.algorithm_var, value=value,
-                indicatoron=False, width=18, height=2,
-                font=("Arial", 11, "bold"),
-                bg="#636e72", fg="white",
-                selectcolor="#6c5ce7", activebackground="#6c5ce7", activeforeground="white",
-                justify="center", wraplength=200
-            )
-            button.pack(pady=4)
+        self._grp_header(sb, "TÌM KIẾM", _GREEN)
+        for lbl, val in [
+            ("BFS",    "BFS"),
+            ("DFS",    "DFS"),
+            ("IDS",    "IDS"),
+            ("UCS",    "UCS"),
+            ("Greedy", "GREEDY"),
+            ("A*",     "A*"),
+            ("IDA*",   "IDA*"),
+        ]:
+            self._radio(sb, lbl, val, _GREEN)
 
-        # START BUTTON
-        start_button = tk.Button(
-            self.sidebar, text="BẮT ĐẦU",
-            command=self.start_cleaning,
-            bg="#00b894", fg="white", font=("Arial", 15, "bold"),
-            width=14, height=1, relief="flat", cursor="hand2"
-        )
-        start_button.pack(pady=(20, 10))
+        self._grp_header(sb, "LOCAL SEARCH", _VIOLET)
+        for lbl, val in [
+            ("Leo đồi đơn giản",    "SIMPLE HC"),
+            ("Leo đồi dốc nhất",     "STEEPEST HC"),
+            ("Leo đồi ngẫu nhiên",   "STOCHASTIC HC"),
+            ("Leo đồi khởi tạo ngẫu nhiên",  "RANDOM RESTART HC"),
 
-        # RESET BUTTON
-        reset_button = tk.Button(
-            self.sidebar, text="RESET",
-            command=self.reset_environment,
-            bg="#e17055", fg="white", font=("Arial", 15, "bold"),
-            width=14, height=1, relief="flat", cursor="hand2"
-        )
-        reset_button.pack()
+            ("Tìm kiếm chùm (k=3)",  "LOCAL BEAM"),
+            ("Ủ mô phỏng (SA)",      "SIMULATED ANNEAL"),
+        ]:
+            self._radio(sb, lbl, val, _VIOLET)
 
-        # CENTER PANEL
-        self.center_frame = tk.Frame(self.main_frame, bg="#dfe6e9")
-        self.center_frame.pack(side="left", fill="both", expand=True)
+        tk.Frame(sb, bg=_PANEL, height=15).pack()
+        
+        tk.Button(sb, text="▶   BẮT ĐẦU",
+                  command=self.start_cleaning,
+                  bg=_GREEN, fg="white",
+                  font=("Segoe UI", 10, "bold"),
+                  relief="flat", cursor="hand2",
+                  width=20, pady=7).pack(padx=14, pady=(0, 8))
+                  
+        tk.Button(sb, text="↺   RESET",
+                  command=self.reset_environment,
+                  bg="#ef4444", fg="white",
+                  font=("Segoe UI", 10, "bold"),
+                  relief="flat", cursor="hand2",
+                  width=20, pady=7).pack(padx=14)
 
-        title = tk.Label(
-            self.center_frame, text="MÔ PHỎNG ROBOT HÚT BỤI",
-            bg="#dfe6e9", fg="#2d3436", font=("Arial", 30, "bold")
-        )
-        title.pack(pady=15)
+    def _grp_header(self, parent, text, color):
+        f = tk.Frame(parent, bg=_PANEL)
+        f.pack(fill="x", padx=12, pady=(12, 4))
+        tk.Frame(f, bg=color, width=4, height=14).pack(side="left")
+        tk.Label(f, text=f"  {text}",
+                 bg=_PANEL, fg=color,
+                 font=("Segoe UI", 8, "bold")).pack(side="left")
 
-        legend = tk.Frame(self.center_frame, bg="#dfe6e9")
-        legend.pack(pady=(0, 10))
-        items = [
-            ("#f1c40f", "Bụi"),
-            ("#74b9ff", "Đã đi"),
-            ("#2d3436", "Vật cản"),
-            ("#0984e3", "Robot"),
-        ]
-        for color, label in items:
-            box = tk.Frame(legend, bg=color, width=15, height=15)
-            box.pack(side="left", padx=(10, 3))
-            tk.Label(legend, text=label, bg="#dfe6e9", fg="#2d3436", font=("Arial", 10, "bold")).pack(side="left", padx=(0, 10))
+    def _radio(self, parent, text, value, accent):
+        tk.Radiobutton(
+            parent,
+            text=f"  {text}",
+            variable=self.algo_var,
+            value=value,
+            indicatoron=False,
+            anchor="w",
+            width=22,
+            font=("Segoe UI", 9),
+            bg=_PANEL, fg=_TEXT,
+            selectcolor=_BG,
+            activebackground=_CARD,
+            activeforeground=_TEXT,
+            relief="flat", pady=3,
+            cursor="hand2",
+            bd=0,
+            highlightthickness=0
+        ).pack(fill="x", padx=14, pady=1)
 
+    # ── Canvas area ──────────────────────────────────────────────────────
+    def _make_canvas_area(self, parent):
+        cf = tk.Frame(parent, bg=_BG)
+        cf.pack(side="left", fill="both", expand=True)
+
+        leg = tk.Frame(cf, bg=_BG)
+        leg.pack(pady=(2, 6))
+        for color, label in [
+            (_C_DIRT,     "Bụi"),
+            (_C_VISITED,  "Đã đi"),
+            (_C_OBSTACLE, "Vật cản"),
+            (_C_ROBOT,    "Robot"),
+            (_C_EMPTY,    "Sạch"),
+        ]:
+            tk.Frame(leg, bg=color, width=12, height=12, bd=1, relief="solid").pack(side="left", padx=(10, 3))
+            tk.Label(leg, text=label, bg=_BG, fg=_TEXT,
+                     font=("Segoe UI", 8, "bold")).pack(side="left", padx=(0, 8))
+
+        gw = self.CELL * 4 + 100
+        gh = self.CELL * 4 + 60
         self.canvas = tk.Canvas(
-            self.center_frame, width=750, height=650,
-            bg="white", highlightthickness=0
+            cf, width=gw, height=gh,
+            bg=_CARD,
+            highlightthickness=1, highlightbackground=_BORDER,
         )
-        self.canvas.pack()
+        self.canvas.pack(pady=2)
 
-        # RIGHT PANEL (ACTIVITY LOG)
-        self.right_panel = tk.Frame(self.main_frame, bg="#b2bec3", width=320)
-        self.right_panel.pack(side="right", fill="y")
-        self.right_panel.pack_propagate(False)
+    # ── Log panel ────────────────────────────────────────────────────────
+    def _make_log_panel(self, parent):
+        rp = tk.Frame(parent, bg=_PANEL, width=260, highlightbackground=_BORDER, highlightthickness=1)
+        rp.pack(side="right", fill="y", padx=(10, 0))
+        rp.pack_propagate(False)
 
-        log_title = tk.Label(
-            self.right_panel, text="NHẬT KÝ HOẠT ĐỘNG",
-            bg="#b2bec3", fg="#2d3436", font=("Arial", 18, "bold")
+        tk.Label(rp, text="NHẬT KÝ HOẠT ĐỘNG",
+                 bg=_PANEL, fg=_TEXT,
+                 font=("Segoe UI", 10, "bold")).pack(pady=(12, 6), padx=12, anchor="w")
+
+        self.log_text = ScrolledText(
+            rp,
+            font=("Consolas", 9),
+            bg=_PANEL, fg="#34d399",
+            insertbackground=_TEXT,
+            relief="flat", borderwidth=0, wrap="word",
         )
-        log_title.pack(pady=20)
+        self.log_text.pack(fill="both", expand=True, padx=10, pady=(0, 12))
 
-        self.log_text = ScrolledText(self.right_panel, font=("Consolas", 11))
-        self.log_text.pack(fill="both", expand=True, padx=15, pady=10)
+    # ── Status bar ───────────────────────────────────────────────────────
+    def _make_statusbar(self):
+        bar = tk.Frame(self.root, bg=_PANEL, height=36, highlightbackground=_BORDER, highlightthickness=1)
+        bar.pack(fill="x", side="bottom")
 
-        # BOTTOM BAR
-        self.bottom_bar = tk.Frame(self.root, bg="#2d3436", height=55)
-        self.bottom_bar.pack(fill="x", side="bottom")
+        self.lbl_status = tk.Label(bar, text="● Sẵn sàng",
+                                    bg=_PANEL, fg=_GREEN,
+                                    font=("Segoe UI", 9, "bold"))
+        self.lbl_status.pack(side="left", padx=16, pady=6)
 
-        self.info_label = tk.Label(
-            self.bottom_bar, text="Sẵn sàng",
-            bg="#2d3436", fg="white", font=("Arial", 14, "bold")
-        )
-        self.info_label.pack(side="left", padx=20)
+        self.lbl_steps = tk.Label(bar, text="Bước: 0",
+                                   bg=_PANEL, fg=_TEXT,
+                                   font=("Segoe UI", 9, "bold"))
+        self.lbl_steps.pack(side="left", padx=12)
 
-        self.step_label = tk.Label(
-            self.bottom_bar, text="Số bước: 0",
-            bg="#2d3436", fg="#55efc4", font=("Arial", 13)
-        )
-        self.step_label.pack(side="left", padx=30)
+        self.lbl_algo = tk.Label(bar, text="",
+                                  bg=_PANEL, fg=_VIOLET,
+                                  font=("Segoe UI", 9, "italic", "bold"))
+        self.lbl_algo.pack(side="right", padx=16)
 
-    # DRAW GRID 
+    # ══════════════════════════════════════════════════════════════════════
+    #  DRAW
+    # ══════════════════════════════════════════════════════════════════════
+    _PX, _PY = 50, 28
+
     def draw_grid(self):
         self.canvas.delete("all")
-
         for r in range(self.environment.rows):
             for c in range(self.environment.cols):
+                self._draw_cell(r, c)
+        self._draw_robot()
 
-                x1 = c * self.CELL_SIZE + 180  
-                y1 = r * self.CELL_SIZE + 80
+    def _draw_cell(self, r, c):
+        x1 = self._PX + c * self.CELL
+        y1 = self._PY + r * self.CELL
+        x2, y2 = x1 + self.CELL, y1 + self.CELL
+        mx, my = (x1 + x2) / 2, (y1 + y2) / 2
 
-                x2 = x1 + self.CELL_SIZE
-                y2 = y1 + self.CELL_SIZE
+        val   = self.environment.grid[r][c]
+        color = _C_EMPTY
+        if (r, c) in self.visited: color = _C_VISITED
+        if val ==  1:              color = _C_DIRT
+        if val == -1:              color = _C_OBSTACLE
 
-                value = self.environment.grid[r][c]
-                color = "#ecf0f1"
+        self.canvas.create_rectangle(x1, y1, x2, y2,
+                                      fill=color, outline=_BORDER, width=2)
+        if val == 1:
+            self.canvas.create_text(mx, my, text="BỤI",
+                                     fill="#fcd34d", font=("Segoe UI", 10, "bold"))
+        elif val == -1:
+            self.canvas.create_text(mx, my, text="✕",
+                                     fill=_C_X_MARK, font=("Segoe UI", 18, "bold"))
 
-                if (r, c) in self.visited_cells:
-                    color = "#74b9ff"
-                if value == 1:
-                    color = "#f1c40f"
-                if value == -1:
-                    color = "#2d3436"
+        self.canvas.create_text(x1 + 10, y1 + 10, text=f"{r},{c}",
+                                 fill=_C_TEXT_COORD, font=("Segoe UI", 8, "bold"))
 
-                self.canvas.create_rectangle(
-                    x1, y1, x2, y2,
-                    fill=color, outline="#636e72", width=2
-                )
+    def _draw_robot(self):
+        if self._oval_id:      self.canvas.delete(self._oval_id)
+        if self._robot_lbl_id: self.canvas.delete(self._robot_lbl_id)
 
-                if value == 1:
-                    self.canvas.create_text(
-                        (x1 + x2) / 2, (y1 + y2) / 2,
-                        text="BỤI", font=("Arial", 11, "bold"),
-                        tags=f"dirt_{r}_{c}"
-                    )
-                elif value == -1:
-                    self.canvas.create_text(
-                        (x1 + x2) / 2, (y1 + y2) / 2,
-                        text="✕", fill="#fab1a0", font=("Arial", 22, "bold")
-                    )
+        r, c = self.robot_pos
+        x1 = self._PX + c * self.CELL + 9
+        y1 = self._PY + r * self.CELL + 9
+        x2, y2 = x1 + self.CELL - 18, y1 + self.CELL - 18
 
-                self.canvas.create_text(
-                    x1 + 22, y1 + 14,
-                    text=f"{r},{c}", fill="#7f8c8d", font=("Arial", 9, "bold")
-                )
-
-        self.draw_robot()
-
-    # DRAW ROBOT
-    def draw_robot(self):
-        if self.robot_draw:
-            self.canvas.delete(self.robot_draw)
-        if self.robot_text:
-            self.canvas.delete(self.robot_text)
-
-        r, c = self.robot_position
-        x1 = c * self.CELL_SIZE + 180
-        y1 = r * self.CELL_SIZE + 80
-        x2 = x1 + self.CELL_SIZE
-        y2 = y1 + self.CELL_SIZE
-
-        self.robot_draw = self.canvas.create_oval(
-            x1 + 10, y1 + 10, x2 - 10, y2 - 10,
-            fill="#0984e3", outline="white", width=3
-        )
-        self.robot_text = self.canvas.create_text(
+        self._oval_id = self.canvas.create_oval(
+            x1, y1, x2, y2,
+            fill=_C_ROBOT, outline="white", width=2)
+        self._robot_lbl_id = self.canvas.create_text(
             (x1 + x2) / 2, (y1 + y2) / 2,
-            text="R", fill="white", font=("Arial", 20, "bold")
-        )
+            text="R", fill="white", font=("Segoe UI", 14, "bold"))
 
-    # GET ALGORITHM
-    def get_algorithm(self):
-        algorithms = {
-            "BFS":               BFSAlgorithm,
-            "DFS":               DFSAlgorithm,
-            "IDS":               IDSAlgorithm,
-            "UCS":               UCSAlgorithm,
-            "GREEDY":            GreedyAlgorithm,
-            "A*":                AStarAlgorithm,
-            "IDA*":              IDAStarAlgorithm,
-            "SIMPLE HC":         SimpleHillClimbingAlgorithm,
-            "STEEPEST HC":       SteepestHillClimbingAlgorithm,
-            "STOCHASTIC HC":     StochasticHillClimbingAlgorithm,
-            "RANDOM RESTART HC": RandomRestartHillClimbingAlgorithm, # Bản đồ hóa lựa chọn mới
-        }
-        selected = self.algorithm_var.get()
-        return algorithms[selected]()
-
-    # START CLEANING
+    # ══════════════════════════════════════════════════════════════════════
+    #  LOGIC
+    # ══════════════════════════════════════════════════════════════════════
     def start_cleaning(self):
         self.log_text.delete("1.0", "end")
-        self.visited_cells = []
-        algorithm = self.get_algorithm()
+        self.visited = []
 
-        self.log(f"Khởi động thuật toán {self.algorithm_var.get()}")
+        name = self.algo_var.get()
+        self.lbl_algo.config(text=f"Thuật toán: {name}")
+        self.log(f"▶  Bắt đầu: {name}")
 
-        agent = VacuumAgent(
-            self.environment,
-            algorithm,
-            self.robot_position
-        )
-
+        algo  = self._ALGO_MAP[name]()
+        self.environment = GridEnvironment([r[:] for r in self.original_grid])
+        agent = VacuumAgent(self.environment, algo, self.robot_pos)
         self.path = agent.run()
-        self.environment = GridEnvironment(
-            [row[:] for row in self.original_grid]
-        )
-        self.animate(0)
 
-    # ANIMATION
-    def animate(self, index):
-        if index >= len(self.path):
-            self.info_label.config(text="Hoàn thành làm sạch")
-            self.log("Robot hoàn thành nhiệm vụ")
+        self.environment = GridEnvironment([r[:] for r in self.original_grid])
+        self._animate(0)
+
+    def _animate(self, idx):
+        if idx >= len(self.path):
+            self.lbl_status.config(text="✔  Hoàn thành", fg=_GREEN)
+            self.log("✔  Robot hoàn thành nhiệm vụ!")
             return
 
-        position = self.path[index]
-        self.robot_position = position
-
-        if position not in self.visited_cells:
-            self.visited_cells.append(position)
-
-        self.environment.clean(position)
+        pos = self.path[idx]
+        self.robot_pos = pos
+        if pos not in self.visited:
+            self.visited.append(pos)
+        self.environment.clean(pos)
         self.draw_grid()
 
-        self.info_label.config(text=f"Robot đang ở: {position}")
-        self.step_label.config(text=f"Số bước: {index + 1}")
-        self.log(f"Di chuyển tới {position}")
+        self.lbl_status.config(text=f"●  Robot tại {pos}", fg=_AMBER)
+        self.lbl_steps.config(text=f"Bước: {idx + 1}")
+        self.log(f"  → {pos}")
 
-        self.root.after(250, lambda: self.animate(index + 1))
+        self.root.after(self.ANIM, lambda: self._animate(idx + 1))
 
-    # RESET ENVIRONMENT
     def reset_environment(self):
-        self.environment = GridEnvironment(
-            [row[:] for row in self.original_grid]
-        )
-        self.robot_position = (0, 0)
-        self.visited_cells = []
-        self.path = []
-        self.robot_draw = None
-        self.robot_text = None
-
+        self._reset_state()
         self.draw_grid()
-        self.info_label.config(text="Đã reset môi trường")
-        self.step_label.config(text="Số bước: 0")
+        self.lbl_status.config(text="●  Đã reset", fg=_GREEN)
+        self.lbl_steps.config(text="Bước: 0")
+        self.lbl_algo.config(text="")
         self.log_text.delete("1.0", "end")
-        self.log("Reset môi trường")
+        self.log("↺  Reset môi trường")
 
-    # LOGGING
-    def log(self, message):
-        self.log_text.insert("end", f"> {message}\n")
+    def log(self, msg):
+        self.log_text.insert("end", f"{msg}\n")
         self.log_text.see("end")
