@@ -1,12 +1,6 @@
 import random
 
 class StochasticHillClimbingAlgorithm:
-    """
-    Leo đồi ngẫu nhiên (Stochastic Hill Climbing).
-    Sinh tất cả lân cận, lọc ra tập Better_Neighbors (tốt hơn trạng thái hiện tại).
-    Chọn NGẪU NHIÊN một trạng thái từ Better_Neighbors để di chuyển.
-    Dừng lại nếu Better_Neighbors rỗng (đạt cực đại cục bộ).
-    """
 
     def value(self, position, goal):
 

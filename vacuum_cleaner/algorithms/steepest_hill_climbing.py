@@ -1,10 +1,5 @@
 class SteepestHillClimbingAlgorithm:
-    """
-    Leo đồi dốc nhất (Steepest-Ascent Hill Climbing).
-    Sinh TẤT CẢ lân cận, chọn lân cận TỐT NHẤT (gần goal nhất).
-    Nếu lân cận tốt nhất vẫn kém hơn trạng thái hiện tại, dừng lại.
-    """
-
+    
     def value(self, position, goal):
 
         return -(

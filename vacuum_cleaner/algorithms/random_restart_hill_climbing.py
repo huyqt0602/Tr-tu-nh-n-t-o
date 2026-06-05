@@ -2,13 +2,7 @@ import random
 
 
 class RandomRestartHillClimbingAlgorithm:
-    """
-    Leo đồi khởi động lại ngẫu nhiên (Random-Restart Hill Climbing).
-    Lặp lại leo đồi nhiều lần với điểm khởi đầu ngẫu nhiên.
-    Mỗi lượt: nếu bị kẹt (Better_Neighbors rỗng), nhảy sang lượt i tiếp theo.
-    Trả về "Thất bại" nếu chạy hết MAX_RESTART lượt mà không chạm được Goal.
-    """
-
+   
     MAX_RESTART = 20
 
     def value(self, position, goal):

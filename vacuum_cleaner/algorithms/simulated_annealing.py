@@ -1,28 +1,7 @@
 import random
 import math
 
-
 class SimulatedAnnealingAlgorithm:
-    """
-    Ủ mô phỏng (Simulated Annealing).
-
-    Pseudocode (theo slide):
-        SimulatedAnnealing(start, goal):
-            current_state = start;  T = T0
-            while T > Tmin:
-                if current_state == goal: return current_state
-                next_state = RandomNeighbor(current_state)
-                Δ = h(next_state) − h(current_state)
-                if Δ < 0:
-                    current_state = next_state
-                else:
-                    p = exp(−Δ / T)
-                    if Random(0,1) < p:
-                        current_state = next_state
-                T = α × T
-            return current_state
-    """
-
     def __init__(
         self,
         T0:    float = 50.0,

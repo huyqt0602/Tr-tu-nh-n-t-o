@@ -2,24 +2,6 @@ import random
 
 
 class LocalBeamSearchAlgorithm:
-    """
-    Tìm kiếm chùm cục bộ (Local Beam Search).
-
-    Pseudocode (theo slide):
-        function Local_Beam_Search(k):
-          1. Khởi tạo:
-             Current_State_set = {Sinh ngẫu nhiên k trạng thái từ Start}
-          2. TRONG KHI (đúng):
-             Neighbor_States = rỗng
-             2.1. SINH TRẠNG THÁI LÂN CẬN:
-                  VỚI MỖI State trong Current_State_set:
-                    Sinh tất cả lân cận, thêm vào Neighbor_States
-             2.2. KIỂM TRA ĐÍCH:
-                  VỚI MỖI Neighbor trong Neighbor_States:
-                    NẾU Neighbor == Goal: TRẢ VỀ Neighbor
-             2.3. LỰA CHỌN CHÙM:
-                  Sắp xếp theo h, giữ k tốt nhất
-    """
 
     def __init__(self, k: int = 3, max_iterations: int = 500):
         self.k              = k
@@ -35,8 +17,6 @@ class LocalBeamSearchAlgorithm:
             return [start]
 
         # ── 1. Khởi tạo ───────────────────────────────────────────────────
-        # FIX: chùm ban đầu = start + lân cận trực tiếp của start
-        # (không dùng ô ngẫu nhiên trên toàn map để tránh nhảy cóc)
         parent: dict = {start: None}
 
         start_neighbors = environment.get_neighbors(start)

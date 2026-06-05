@@ -1,9 +1,4 @@
 class SimpleHillClimbingAlgorithm:
-    """
-    Leo đồi đơn giản (Simple Hill Climbing).
-    Tìm trạng thái lân cận ĐẦU TIÊN tốt hơn trạng thái hiện tại và chuyển sang đó.
-    Dừng lại nếu không có trạng thái lân cận nào tốt hơn (đạt cực đại cục bộ).
-    """
 
     def value(self, position, goal):
 
