@@ -43,7 +43,7 @@ _C_OBSTACLE = "#7f1d1d"
 _C_ROBOT    = "#3b82f6"   
 
 _C_X_MARK   = "#fca5a5"   
-_C_TEXT_COORD= "#64748b"  
+_C_TEXT_COORD = "#e2e8f0"  
 
 
 class VacuumUI:
@@ -77,7 +77,7 @@ class VacuumUI:
     def __init__(self, root: tk.Tk):
         self.root = root
         self.root.title("Robot Hút Bụi — AI Algorithms")
-        self.root.geometry("1300x820")
+        self.root.geometry("1450x820")
         self.root.resizable(False, False)
         self.root.configure(bg=_BG)
 
@@ -121,51 +121,94 @@ class VacuumUI:
 
     # ── Sidebar ──────────────────────────────────────────────────────────
     def _make_sidebar(self, parent):
-        sb = tk.Frame(parent, bg=_PANEL, width=235, highlightbackground=_BORDER, highlightthickness=1)
+        sb = tk.Frame(
+            parent,
+            bg=_PANEL,
+            width=320,
+            highlightbackground=_BORDER,
+            highlightthickness=1
+        )
         sb.pack(side="left", fill="y", padx=(0, 10))
         sb.pack_propagate(False)
 
         self.algo_var = tk.StringVar(value="BFS")
 
-        self._grp_header(sb, "TÌM KIẾM", _GREEN)
+        # =====================================================
+        # 1. UNINFORMED SEARCH
+        # =====================================================
+        self._grp_header(sb, "UNINFORMED SEARCH", _GREEN)
+
         for lbl, val in [
-            ("BFS",    "BFS"),
-            ("DFS",    "DFS"),
-            ("IDS",    "IDS"),
-            ("UCS",    "UCS"),
-            ("Greedy", "GREEDY"),
-            ("A*",     "A*"),
-            ("IDA*",   "IDA*"),
+            ("Breadth First Search (BFS)", "BFS"),
+            ("Depth First Search (DFS)", "DFS"),
+            ("Iterative Deepening (IDS)", "IDS"),
+            ("Uniform Cost Search (UCS)", "UCS"),
         ]:
             self._radio(sb, lbl, val, _GREEN)
 
-        self._grp_header(sb, "LOCAL SEARCH", _VIOLET)
-        for lbl, val in [
-            ("Leo đồi đơn giản",    "SIMPLE HC"),
-            ("Leo đồi dốc nhất",     "STEEPEST HC"),
-            ("Leo đồi ngẫu nhiên",   "STOCHASTIC HC"),
-            ("Leo đồi khởi tạo ngẫu nhiên",  "RANDOM RESTART HC"),
+        # =====================================================
+        # 2. INFORMED SEARCH
+        # =====================================================
+        self._grp_header(sb, "INFORMED SEARCH", "#3b82f6")
 
-            ("Tìm kiếm chùm (k=3)",  "LOCAL BEAM"),
-            ("Ủ mô phỏng (SA)",      "SIMULATED ANNEAL"),
+        for lbl, val in [
+            ("Greedy Best First Search", "GREEDY"),
+            ("A* Search", "A*"),
+            ("IDA* Search", "IDA*"),
+        ]:
+            self._radio(sb, lbl, val, "#3b82f6")
+
+        # =====================================================
+        # 3. HILL CLIMBING
+        # =====================================================
+        self._grp_header(sb, "HILL CLIMBING", _VIOLET)
+
+        for lbl, val in [
+            ("Simple Hill Climbing", "SIMPLE HC"),
+            ("Steepest Ascent HC", "STEEPEST HC"),
+            ("Stochastic HC", "STOCHASTIC HC"),
+            ("Random Restart HC", "RANDOM RESTART HC"),
         ]:
             self._radio(sb, lbl, val, _VIOLET)
 
+        # =====================================================
+        # 4. METAHEURISTIC & LOCAL SEARCH
+        # =====================================================
+        self._grp_header(sb, "METAHEURISTIC SEARCH", _AMBER)
+
+        for lbl, val in [
+            ("Local Beam Search", "LOCAL BEAM"),
+            ("Simulated Annealing", "SIMULATED ANNEAL"),
+        ]:
+            self._radio(sb, lbl, val, _AMBER)
+
         tk.Frame(sb, bg=_PANEL, height=15).pack()
-        
-        tk.Button(sb, text="▶   BẮT ĐẦU",
-                  command=self.start_cleaning,
-                  bg=_GREEN, fg="white",
-                  font=("Segoe UI", 10, "bold"),
-                  relief="flat", cursor="hand2",
-                  width=20, pady=7).pack(padx=14, pady=(0, 8))
-                  
-        tk.Button(sb, text="↺   RESET",
-                  command=self.reset_environment,
-                  bg="#ef4444", fg="white",
-                  font=("Segoe UI", 10, "bold"),
-                  relief="flat", cursor="hand2",
-                  width=20, pady=7).pack(padx=14)
+
+        tk.Button(
+            sb,
+            text="▶   BẮT ĐẦU",
+            command=self.start_cleaning,
+            bg=_GREEN,
+            fg="white",
+            font=("Segoe UI", 10, "bold"),
+            relief="flat",
+            cursor="hand2",
+            width=24,
+            pady=7
+        ).pack(padx=14, pady=(0, 8))
+
+        tk.Button(
+            sb,
+            text="↺   RESET",
+            command=self.reset_environment,
+            bg="#ef4444",
+            fg="white",
+            font=("Segoe UI", 10, "bold"),
+            relief="flat",
+            cursor="hand2",
+            width=24,
+            pady=7
+        ).pack(padx=14)
 
     def _grp_header(self, parent, text, color):
         f = tk.Frame(parent, bg=_PANEL)
@@ -183,13 +226,15 @@ class VacuumUI:
             value=value,
             indicatoron=False,
             anchor="w",
-            width=22,
+            width=34,
             font=("Segoe UI", 9),
-            bg=_PANEL, fg=_TEXT,
+            bg=_PANEL,
+            fg=_TEXT,
             selectcolor=_BG,
             activebackground=_CARD,
             activeforeground=_TEXT,
-            relief="flat", pady=3,
+            relief="flat",
+            pady=3,
             cursor="hand2",
             bd=0,
             highlightthickness=0
